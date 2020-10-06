@@ -19,13 +19,14 @@
 #include "AP_HAL_ChibiOS.h"
 #include "Scheduler.h"
 #include "Util.h"
+#include "GPIO.h"
 
 #include <AP_HAL_ChibiOS/UARTDriver.h>
 #include <AP_HAL_ChibiOS/AnalogIn.h>
 #include <AP_HAL_ChibiOS/Storage.h>
 #include <AP_HAL_ChibiOS/RCOutput.h>
 #include <AP_HAL_ChibiOS/RCInput.h>
-#include <AP_HAL_ChibiOS/CAN.h>
+#include <AP_HAL_ChibiOS/CANIface.h>
 #include <AP_InternalError/AP_InternalError.h>
 
 #if CH_CFG_USE_DYNAMIC == TRUE
@@ -333,6 +334,10 @@ void Scheduler::_timer_thread(void *arg)
 */
 bool Scheduler::in_expected_delay(void) const
 {
+    if (!_initialized) {
+        // until setup() is complete we expect delays
+        return true;
+    }
     if (expect_delay_start != 0) {
         uint32_t now = AP_HAL::millis();
         if (now - expect_delay_start <= expect_delay_length) {
@@ -411,6 +416,10 @@ void Scheduler::_monitor_thread(void *arg)
     }
 #endif // HAL_NO_LOGGING
 
+#ifndef IOMCU_FW
+    // setup GPIO interrupt quotas
+    hal.gpio->timer_tick();
+#endif
     }
 }
 #endif // HAL_NO_MONITOR_THREAD
